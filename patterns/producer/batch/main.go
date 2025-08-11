@@ -17,7 +17,7 @@ func main() {
 	config.Producer.Flush.Bytes = 1024 * 1024           // 1MB batch size
 	config.Producer.Return.Successes = true
 
-	producer, err := sarama.NewSyncProducer([]string{"localhost:9092"}, config)
+	producer, err := sarama.NewSyncProducer([]string{"localhost:9094"}, config)
 	if err != nil {
 		log.Fatalf("Failed to create producer: %v", err)
 	}

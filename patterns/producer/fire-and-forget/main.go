@@ -15,7 +15,7 @@ func main() {
 	config.Producer.Retry.Max = 0                    // No retries
 	config.Producer.Return.Successes = false         // Don't return successes
 
-	producer, err := sarama.NewSyncProducer([]string{"localhost:9092"}, config)
+	producer, err := sarama.NewSyncProducer([]string{"localhost:9094"}, config)
 	if err != nil {
 		log.Fatalf("Failed to create producer: %v", err)
 	}
