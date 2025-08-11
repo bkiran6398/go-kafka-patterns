@@ -2,6 +2,9 @@ package main
 
 import (
 	"log"
+	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/IBM/sarama"
 )
@@ -12,31 +15,48 @@ import (
 func main() {
 	config := sarama.NewConfig()
 	config.Producer.RequiredAcks = sarama.WaitForLocal
-	config.Producer.Flush.Frequency = 500 * 1000 * 1000 // 500ms
-	config.Producer.Flush.Messages = 100                // Batch size of 100 messages
-	config.Producer.Flush.Bytes = 1024 * 1024           // 1MB batch size
+	config.Producer.Flush.Frequency = 500 * time.Millisecond // flush every 500ms
+	config.Producer.Flush.Messages = 100                     // target 100 messages per batch
+	config.Producer.Flush.Bytes = 1 * 1024 * 1024            // or 1MB
 	config.Producer.Return.Successes = true
+	config.Producer.Return.Errors = true
 
-	producer, err := sarama.NewSyncProducer([]string{"localhost:9094"}, config)
+	producer, err := sarama.NewAsyncProducer([]string{"localhost:9094"}, config)
 	if err != nil {
-		log.Fatalf("Failed to create producer: %v", err)
+		log.Fatalf("Failed to create async producer: %v", err)
 	}
-	defer producer.Close()
 
-	// Send multiple messages - they will be batched automatically
-	for i := range 10 {
-		message := &sarama.ProducerMessage{
+	var successes int64
+	var failures int64
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		for range producer.Successes() {
+			atomic.AddInt64(&successes, 1)
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		for err := range producer.Errors() {
+			log.Printf("Send error: %v", err)
+			atomic.AddInt64(&failures, 1)
+		}
+	}()
+
+	numMessages := 200
+	for range numMessages {
+		producer.Input() <- &sarama.ProducerMessage{
 			Topic: "batch-topic",
 			Value: sarama.StringEncoder("Batch message"),
 		}
-
-		partition, offset, err := producer.SendMessage(message)
-		if err != nil {
-			log.Printf("Failed to send message %d: %v", i, err)
-		} else {
-			log.Printf("Message %d sent to partition %d at offset %d", i, partition, offset)
-		}
 	}
 
-	log.Println("Batch producer finished")
+	// Signal we are done producing; this will flush remaining batches and close channels
+	producer.AsyncClose()
+	wg.Wait()
+
+	log.Printf("Batch producer finished: successes=%d, errors=%d", successes, failures)
 }
