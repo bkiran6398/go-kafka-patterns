@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"time"
 
 	"github.com/IBM/sarama"
 )
@@ -14,8 +15,9 @@ func main() {
 	config.Producer.RequiredAcks = sarama.NoResponse // Don't wait for any acknowledgment
 	config.Producer.Retry.Max = 0                    // No retries
 	config.Producer.Return.Successes = false         // Don't return successes
+	config.Producer.Return.Errors = false            // Don't require reading errors channel
 
-	producer, err := sarama.NewSyncProducer([]string{"localhost:9094"}, config)
+	producer, err := sarama.NewAsyncProducer([]string{"localhost:9094"}, config)
 	if err != nil {
 		log.Fatalf("Failed to create producer: %v", err)
 	}
@@ -27,10 +29,9 @@ func main() {
 	}
 
 	// Send message without waiting for response
-	_, _, err = producer.SendMessage(message)
-	if err != nil {
-		log.Printf("Failed to send message: %v", err)
-	}
+	producer.Input() <- message
 
-	log.Println("Message sent (fire-and-forget)")
+	// Brief sleep to hand off to producer goroutine (fire-and-forget)
+	time.Sleep(300 * time.Millisecond)
+	log.Println("Message dispatched (fire-and-forget)")
 }
