@@ -130,11 +130,14 @@ require (
 
 ## Running the Examples
 
-1. **Start Kafka**: Ensure you have a Kafka cluster running on `localhost:9094` (external listener)
+1. **Start Kafka** (external listener on `localhost:9094`)
+   - Start: `make kafka-up`
+   - Stop: `make kafka-down`
+   - UI: `http://localhost:8080` (cluster: "local")
 
-2. **Create Topics**: Create the required topics for the patterns you want to test
+2. **Create Topics** (only if auto-create is disabled)
 
-3. **Run a Pattern**: Navigate to any pattern directory and run:
+3. **Run a Pattern**: in a pattern directory:
    ```bash
    go run main.go
    ```
