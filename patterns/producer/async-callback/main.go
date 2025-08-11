@@ -16,7 +16,7 @@ func main() {
 	config.Producer.Return.Successes = true
 	config.Producer.Return.Errors = true
 
-	producer, err := sarama.NewAsyncProducer([]string{"localhost:9092"}, config)
+	producer, err := sarama.NewAsyncProducer([]string{"localhost:9094"}, config)
 	if err != nil {
 		log.Fatalf("Failed to create producer: %v", err)
 	}
